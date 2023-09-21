@@ -45,6 +45,7 @@ class HealthChecker:
             }
 
     def extract_data(self, file_path):
+        print('Health check job started')
         start_time = time.time()
         rows = []
 
@@ -56,6 +57,7 @@ class HealthChecker:
 
         for i in range(10):  # 10 threads
             # Create a thread that will process a subset of rows
+            print('Thread '+str(i)+' started')
             t = threading.Thread(target=lambda: [self.process_row(row) for row in rows[i::10]], name=f"{i}")
             threads.append(t)
             t.start()
@@ -97,10 +99,14 @@ class HealthChecker:
 
         return output_data
     
-    def get_past_one_hour_summary(self):
+    def get_all_records(self):
         table = self.dynamodb_resource.Table(table_name)
         response = table.scan()
         items = response['Items']
+        return items
+    
+    def get_past_one_hour_summary(self):
+        items = self.get_all_records()
         sorted_items = sorted(items, key=lambda x: int(x['id']), reverse=True)
         result = []
         for past_hour_item in sorted_items:
@@ -115,13 +121,14 @@ class HealthChecker:
     def delete_old_records(self):
         table = self.dynamodb_resource.Table(table_name)
         one_hour_ago = int((time.time() - 3600) * 1000)  # 3600 seconds = 1 hour
-        items = self.get_past_one_hour_summary()
+        items = self.get_all_records()
 
         if len(items) > 0:
             # Delete each item that is older than one hour
             print(f"Deleting older items")
             for item in items:
-                if int(item['id']) < one_hour_ago:
+                id_value = item.get('id')
+                if id_value is not None and int(id_value) < one_hour_ago:
                     table.delete_item(
                         Key={
                             'id': item['id']
@@ -145,4 +152,3 @@ class HealthChecker:
         )
 
         print("Dynamo DB resposne ", response)
-    

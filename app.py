@@ -8,6 +8,7 @@ from health_checker import HealthChecker
 app = FastAPI()
 
 origins = ["*"]
+healthChecker = HealthChecker()
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,7 +26,6 @@ class Scheduler:
     @staticmethod
     def testapi():
         print('Invoking health check job..')
-        healthChecker = HealthChecker()
         healthChecker.extract_data('websites_cleaned.csv')
         healthChecker.delete_old_records()
         healthChecker.save_latest_summary()
@@ -45,22 +45,22 @@ def health():
 
 @app.get("/latest-summary")
 def summary():
-    summary = HealthChecker().get_latest_summary()
+    summary = healthChecker.get_latest_summary()
     print('Latest summary', str(summary))
     return summary
 
 
 @app.get("/websites-status")
 def websites_status():
-    response = HealthChecker().get_websites_status()
+    response = healthChecker.get_websites_status()
     print('Websites status', len(response))
     return response
 
 
 @app.get("/past-hour-summary")
 def past_hour_summary():
-    summary = HealthChecker().get_past_one_hour_summary()
-    print('Past hour summary', str(summary))
+    summary = healthChecker.get_past_one_hour_summary()
+    print('Past hour summary', len(summary))
     return summary
 
 
